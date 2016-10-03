@@ -1,11 +1,20 @@
 #include "matrixOP.h"
-#include "OPMatrix.h"
 #include <iostream>
 #include <math.h>
 
 using namespace std;
 using namespace Math;
 
+MatrixOP<double> operator*(double val, MatrixOP<double> ma)
+{
+	MatrixOP<double> rt{ma};
+
+	for(int i=0; i<rt.rowCount ;++i)
+		for(int j=0; j<rt.colCount ;++j)
+			rt.set(i, j, val*rt[i][j]);
+
+	return rt;
+}
 
 MatrixOP<double> operator-(double val, MatrixOP<double> ma)
 {
