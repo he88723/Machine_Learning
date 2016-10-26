@@ -180,7 +180,7 @@ public:
 		}
 	}
 
-	void One2RowOP(MatrixOP<Type> single, operate op, bool formerFlag)//singleRowOP
+	void One2RowOP(MatrixOP<Type> single, operate op, bool formerFlag = true)//singleRowOP
 	{
 		if(single.rowCount != Matrix<Type>::rowCount || single.colCount != 1)
 		{
@@ -257,7 +257,7 @@ public:
 		}
 	}
 
-	void One2ColOP(MatrixOP<Type> single, operate op, bool formerFlag)//singleColOP
+	void One2ColOP(MatrixOP<Type> single, operate op, bool formerFlag = true)//singleColOP
 	{
 		if(single.colCount != Matrix<Type>::colCount || single.colCount != 1)
 		{

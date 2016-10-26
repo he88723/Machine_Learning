@@ -5,86 +5,51 @@
 using namespace std;
 using namespace Math;
 
-MatrixOP<double> operator*(double val, MatrixOP<double> ma)
-{
-	MatrixOP<double> rt{ma};
+MatrixOP<double> lossBackward(MatrixOP<double> y, MatrixOP<double> t)
+{return y-t;}
 
-	for(int i=0; i<rt.rowCount ;++i)
-		for(int j=0; j<rt.colCount ;++j)
-			rt.set(i, j, val*rt(i,j));
-
-	return rt;
-}
-
-MatrixOP<double> operator-(double val, MatrixOP<double> ma)
-{
-	MatrixOP<double> rt{ma};
-
-	for(int i=0; i<rt.rowCount ;++i)
-		for(int j=0; j<rt.colCount ;++j)
-			rt.set(i, j, val-rt(i,j));
-
-	return rt;
-}
-
-class LOSS
+class Layer
 {
 
 public:
 
-	LOSS():loss{}{}
-	double forward(MatrixOP<double> y, MatrixOP<double> t); 
-	MatrixOP<double> backward()
-	{return loss;}
-
-
-	MatrixOP<double> loss;
-
-};
-
-class FC
-{
-
-public:
-
-	FC(int numIn, int numOut, double lr):numberIn{numIn},numberOut{numOut},learningRate{lr},
-	weight{numIn, numOut},bias{0.0},topVal{0,0},downVal{0,0},grad_w{0,0},grad_b{0}
+	Layer(int input, int output, double lr) : input_size{input}, output_size{output},
+	learnRate{lr}, bias{input, 1}, grad_b{0,0}, weight{input, output}, grad_w{0,0},
+	topVal{0,0}, downVal{0,0}
 	{
-		weight.rndSet((double)0.0, (double)1.0);		
+		weight.rndSet((double)0.0, (double)1.0);
 	}
 
-	MatrixOP<double> forward(MatrixOP<double> indata);
-	MatrixOP<double> sigmoid(MatrixOP<double> indata);
-	MatrixOP<double> backward(MatrixOP<double> indata);
+	MatrixOP<double> forward(MatrixOP<double> in_data);
+	MatrixOP<double> backward(MatrixOP<double> in_data);
+	MatrixOP<double> sigmoid(MatrixOP<double> in_data);
 
-//data
 	MatrixOP<double> weight;
-	MatrixOP<double> topVal;
-	MatrixOP<double> downVal;
 	MatrixOP<double> grad_w;
 
-	int numberIn;
-	int numberOut;
-	double learningRate;
+	MatrixOP<double> topVal;
+	MatrixOP<double> downVal;
+
+	int input_size;
+	int output_size;
+
 	double bias;
 	double grad_b;
+	double learnRate;
 };
 
 class Net
 {
 
 public:
-
 	Net(int inNum = 2, int hidNum = 4, int outNum = 1, double lr = 0.1):fc1{inNum, hidNum, lr},fc2{hidNum, outNum, lr},loss{}
-	{}
 
-	void train(MatrixOP<double> X, MatrixOP<double> Y);
+	void train(MatrixOP<double> in_data, MatrixOP<double> target);
 
-	FC	 fc1;
-	FC	 fc2;
-	LOSS loss;
-
+	Layer fc1;
+	Layer fc2;
 };
+
 
 int main(void)
 {
@@ -99,59 +64,38 @@ int main(void)
 	return 0;
 }
 
-MatrixOP<double> FC::sigmoid(MatrixOP<double> indata)
+
+Layer::forward(MatrixOP<double> in_data)
 {
-	MatrixOP<double> rt{indata};
+	topVal  = weight.translate() * in_data;
+	downVal = in_data;
 
-	for(int i=0; i<rt.rowCount ;++i)
-		for(int j=0; j<rt.colCount ;++j)
-			rt.set(i, j, 1/ ( 1+exp(0-rt(i,j)) ) );
-
-	return rt;
-}
-
-MatrixOP<double> FC::forward(MatrixOP<double> indata)
-{
-	topVal = weight.transpose() * indata;
-
-	downVal= indata;	
+	topVal  = topVal + bias;
 
 	for(int i=0; i<topVal.rowCount ;++i)
 		for(int j=0; j<topVal.colCount ;++j)
-			topVal.set(i, j, topVal(i,j)+bias);
+			topVal.set(i, j, 1/(1 + exp(0-topVal(i,j) )) );
 
-	topVal = sigmoid(topVal);
 	return topVal;
 }
 
-MatrixOP<double> FC::backward(MatrixOP<double> indata)
+Layer::backward(MatrixOP<double> in_data)
 {
-	MatrixOP<double> z{indata};
+	for(int i=0; i<in_data.rowCount ;++i)
+		for(int j=0; j<in_data.colCount ;++j)
+			in_data.set(i, j, in_data(i, j)*topVal(i, j)*(1 - topVal(i, j)));
 
-	for(int i=0; i<z.rowCount ;++i)
-		for(int j=0; j<z.colCount ;++j)
-			z.set(i, j, z(i,j)*topVal(i,j)*(1-topVal(i,j)) );
+	grad_w = downVal * in_data.translate();
+	grad_b = in_data.sum();
 
-	grad_w = downVal * z.transpose();
-	grad_b = z.sum();	
+	grad_w = learnRate*grad_w;
+	
+	weight = weight - grad_w;
+	bias  -= grad_b*learnRate;
 
-	for(int i=0; i<grad_w.rowCount ;++i)
-		for(int j=0; j<grad_w.colCount ;++j)
-			grad_w.set(i, j, grad_w(i,j)*learningRate);
-
-	weight =  weight - grad_w;
-	bias   -= learningRate * grad_b;
-
-	return weight * z;
-
+	return weight * in_data;
 }
 
-double LOSS::forward(MatrixOP<double> y, MatrixOP<double> t)
-{
-	loss = y - t;
-
-	return (0.5*loss).sum();
-}
 
 void Net::train(MatrixOP<double> X, MatrixOP<double> Y)
 {
@@ -159,23 +103,17 @@ void Net::train(MatrixOP<double> X, MatrixOP<double> Y)
 	MatrixOP<double> layer1out{};
 	MatrixOP<double> layer2out{};
 
-	MatrixOP<double> layer1loss{};
-	MatrixOP<double> layer2loss{};
-
-	MatrixOP<double> saliency{};
-	double los;
-
+	MatrixOP<double> layerloss{};
+	
 	for(int i=0; i<10000 ;++i)
 	{
 
 		layer1out  = fc1.forward(X);
 		layer2out  = fc2.forward(layer1out);
 
-		los        = loss.forward(layer2out, Y);
-		layer2loss = loss.backward();
-		layer1loss = fc2.backward(layer2loss);
+		layerloss = fc2.backward(loss(layer2out, Y));
 
-		saliency   = fc1.backward(layer1loss);
+		fc1.backward(layer1loss);
 	}
 
 	layer1out = fc1.forward(X);
