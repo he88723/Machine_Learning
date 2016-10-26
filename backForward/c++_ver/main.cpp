@@ -11,7 +11,7 @@ MatrixOP<double> operator*(double val, MatrixOP<double> ma)
 
 	for(int i=0; i<rt.rowCount ;++i)
 		for(int j=0; j<rt.colCount ;++j)
-			rt.set(i, j, val*rt[i][j]);
+			rt.set(i, j, val*rt(i,j));
 
 	return rt;
 }
@@ -22,7 +22,7 @@ MatrixOP<double> operator-(double val, MatrixOP<double> ma)
 
 	for(int i=0; i<rt.rowCount ;++i)
 		for(int j=0; j<rt.colCount ;++j)
-			rt.set(i, j, val-rt[i][j]);
+			rt.set(i, j, val-rt(i,j));
 
 	return rt;
 }
@@ -105,7 +105,7 @@ MatrixOP<double> FC::sigmoid(MatrixOP<double> indata)
 
 	for(int i=0; i<rt.rowCount ;++i)
 		for(int j=0; j<rt.colCount ;++j)
-			rt.set(i, j, 1/ ( 1+exp(0-rt[i][j]) ) );
+			rt.set(i, j, 1/ ( 1+exp(0-rt(i,j)) ) );
 
 	return rt;
 }
@@ -118,7 +118,7 @@ MatrixOP<double> FC::forward(MatrixOP<double> indata)
 
 	for(int i=0; i<topVal.rowCount ;++i)
 		for(int j=0; j<topVal.colCount ;++j)
-			topVal.set(i, j, topVal[i][j]+bias);
+			topVal.set(i, j, topVal(i,j)+bias);
 
 	topVal = sigmoid(topVal);
 	return topVal;
@@ -130,14 +130,14 @@ MatrixOP<double> FC::backward(MatrixOP<double> indata)
 
 	for(int i=0; i<z.rowCount ;++i)
 		for(int j=0; j<z.colCount ;++j)
-			z.set(i, j, z[i][j]*topVal[i][j]*(1-topVal[i][j]) );
+			z.set(i, j, z(i,j)*topVal(i,j)*(1-topVal(i,j)) );
 
 	grad_w = downVal * z.transpose();
 	grad_b = z.sum();	
 
 	for(int i=0; i<grad_w.rowCount ;++i)
 		for(int j=0; j<grad_w.colCount ;++j)
-			grad_w.set(i, j, grad_w[i][j]*learningRate);
+			grad_w.set(i, j, grad_w(i,j)*learningRate);
 
 	weight =  weight - grad_w;
 	bias   -= learningRate * grad_b;
