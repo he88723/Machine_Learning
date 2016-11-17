@@ -19,7 +19,7 @@ public:
 
 	Layer(int input, int output, double lr) : input_size{input}, output_size{output},
 	learnRate{lr}, bias{0}, grad_b{0}, weight{input, output}, grad_w{0,0},
-	topVal{}, downVal{}
+	topVal{0,0}, downVal{0,0}
 	{
 		weight.rndSet((double)0.0, (double)1.0);
 	}
@@ -55,6 +55,26 @@ public:
 	Layer fc2;
 };
 
+class CONV
+{
+
+public:
+
+	CONV(int kernelSize):
+	
+	vector<MatrixOP<double>> conv(MatrixOP<double> in_data,vector<MatrixOP<double>> kernel, int stride);
+	MatrixOP<double> forward(MatrixOP<double> in_data);
+	MatrixOP<double> backward(MatrixOP<double> in_data);
+	
+	vector<MatrixOP<double>> weight;
+	vector<MatrixOP<double>> topVal;	//y
+	MatrixOP<double> butomVal;			//x
+
+	double bias;
+	double grad_b;
+	double learnRate;
+}; 
+
 int main(void)
 {
 	
@@ -65,7 +85,6 @@ int main(void)
 	Y1 = Y1.transpose();
 	net.train(X1,Y1);
 
-	
 	return 0;
 }
 
@@ -121,10 +140,41 @@ void Net::train(MatrixOP<double> X, MatrixOP<double> Y)
 		fc1.backward(layerloss);
 	}
 
-	layer1out  = fc1.forward(X);
-	layer2out  = fc2.forward(layer1out);
+}
 
-	cout << layer1out << endl << layer2out;
+vector<MatrixOP<double>> conv(MatrixOP<double> in_data, vector<MatrixOP<double>> kernel, int stride)
+{
+	vector<MatrixOP<double>> rt;
+	
+	auto ss = (in_data.rowCount - kernel[0].rowCount)/stride + 1;
+	MatrixOP<double> perTime{ss, ss};
+	for(int kernelSize=0; kernelSize<kernel.size() ;++kernelSize)
+	{
+		for(int i=0; i<in_data.rowCount ;i+=stride)
+			for(int j=0; j<in_data.colCount ;j+=stride)
+				for(int z=0; z<kernel[0].rowCount ;++z)
+					for(int k=0; k<kernel[0].colCount ;++k)
+						perTime.set(i/stride, j/stride, perTime(i/stride,j/stride) + in_data(i+z, j+k)*kernel[kernelSize](z,k));
 
+		rt.push_back(perTime);
+		perTime.zero();
+	}
+	
+	return rt;
+}
 
+vector<MatrixOP<double>> CONV::forward(MatrixOP<double> in_data)
+{
+	downVal = in_data;
+
+	topVal = conv(in_data, weight);
+
+	for(int i=0; i<topVal.size() ;++i)
+		topVal[i] = topVal[i] + bias;
+
+	for(int i=0; i<topVal.size() ;++i)
+		topVal[i].setAll(ReLu);
+
+	return topVal;
+}
 }

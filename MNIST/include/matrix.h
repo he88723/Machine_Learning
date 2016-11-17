@@ -274,8 +274,7 @@ public:
 
 	int colCount ,rowCount;
 
-protected: 
-	Type* mainData;
+	protected Type* mainData;
 };
 
 };
